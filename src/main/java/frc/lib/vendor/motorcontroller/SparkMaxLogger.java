@@ -1,42 +1,54 @@
 package frc.lib.vendor.motorcontroller;
 
-import java.util.function.Consumer;
-
+import com.revrobotics.CANSparkMax;
 import edu.wpi.first.util.datalog.DataLog;
 import edu.wpi.first.util.datalog.DoubleLogEntry;
+import edu.wpi.first.util.datalog.IntegerLogEntry;
 import frc.lib.telemetrystream.StreamedDouble;
+import frc.lib.telemetrystream.StreamedInteger;
 import frc.lib.vendor.motorcontroller.stream.SparkMaxStream;
+import java.util.function.Consumer;
 
 public class SparkMaxLogger {
-    private final SparkMaxStream m_stream;
-    private static final String NT_PREFIX = "/sparkmaxlog/";
+  private final SparkMaxStream m_stream;
+  private static final String NT_PREFIX = "/sparkmaxlog/";
+  private final int m_deviceId;
+  private final DataLog m_datalog;
 
-    private Consumer<StreamedDouble> LoggedStreamFactory(String ntEntryName, DataLog log) {
-        return (streamedDouble) -> {
-            String fullNtPath = NT_PREFIX + String.valueOf(streamedDouble.deviceId) + "/" + ntEntryName;
-            new DoubleLogEntry(log, fullNtPath).append(streamedDouble.value, streamedDouble.timestamp);
-        };
-    }
+  private Consumer<StreamedDouble> LoggedStreamDoubleFactory(String ntEntryName) {
+    String fullNtPath = NT_PREFIX + String.valueOf(m_deviceId) + "/" + ntEntryName;
+    DoubleLogEntry logEntry = new DoubleLogEntry(m_datalog, fullNtPath);
+    return (streamedDouble) -> {
+      logEntry.append(streamedDouble.value, streamedDouble.timestamp);
+    };
+  }
 
-    public SparkMaxLogger(DataLog log) {
-        m_stream = new SparkMaxStream();
+  private Consumer<StreamedInteger> LoggedIntegerStreamFactory(String ntEntryName) {
+    String fullNtPath = NT_PREFIX + String.valueOf(m_deviceId) + "/" + ntEntryName;
+    IntegerLogEntry logEntry = new IntegerLogEntry(m_datalog, fullNtPath);
+    return (streamedDouble) -> {
+      logEntry.append(streamedDouble.value, streamedDouble.timestamp);
+    };
+  }
 
-        m_stream.appliedOutputConsumer(LoggedStreamFactory("appliedOutput", log));
-        m_stream.stickyFaultsConsumer((streamedInteger) -> {
-            String fullNtPath = NT_PREFIX + String.valueOf(streamedInteger.deviceId) + "/" + "stickyFaults";
-            new DoubleLogEntry(log, fullNtPath).append(streamedInteger.value, streamedInteger.timestamp);
-        });
-        m_stream.currentConsumer(LoggedStreamFactory("outputCurrent", log));
-        m_stream.velocityConsumer(LoggedStreamFactory("velocity", log));
-        m_stream.positionConsumer(LoggedStreamFactory("position", log));
-        m_stream.supplyVoltageConsumer(LoggedStreamFactory("supplyVoltage", log));
-    }
+  public SparkMaxLogger(CANSparkMax sparkMax, DataLog log) {
+    m_deviceId = sparkMax.getDeviceId();
+    m_datalog = log;
+    m_stream =
+        new SparkMaxStream(m_deviceId)
+            .appliedOutputConsumer(LoggedStreamDoubleFactory("appliedOutput"))
+            .stickyFaultsConsumer(LoggedIntegerStreamFactory("stickyFaults"))
+            .currentConsumer(LoggedStreamDoubleFactory("outputCurrent"))
+            .velocityConsumer(LoggedStreamDoubleFactory("velocity"))
+            .positionConsumer(LoggedStreamDoubleFactory("position"))
+            .supplyVoltageConsumer(LoggedStreamDoubleFactory("supplyVoltage"));
+  }
 
-    public void start() {
-        m_stream.start();
-    }
+  public void start() {
+    m_stream.start();
+  }
 
-    public void stop() {
-        m_stream.stop();
-    }
+  public void stop() {
+    m_stream.stop();
+  }
 }

@@ -1,6 +1,5 @@
 package frc.lib.vendor.motorcontroller.stream;
 
-import edu.wpi.first.hal.CANStreamMessage;
 import edu.wpi.first.hal.HAL;
 import frc.lib.vendor.motorcontroller.stream.SparkMaxFrames.DataFrame;
 import java.util.ArrayList;
@@ -28,18 +27,6 @@ public class SparkMaxStreamTest {
     HAL.shutdown();
   }
 
-  private CANStreamMessage setMessage(int messageId, byte[] data, long timestamp) {
-    var result = new CANStreamMessage();
-    for (int i = 0; i < data.length; i++) {
-      result.data[i] = data[i];
-    }
-    result.length = data.length;
-    result.messageID = messageId;
-    result.timestamp = timestamp;
-
-    return result;
-  }
-
   @Test
   public void exampleTest() {
     ArrayList<Double> velocityValues = new ArrayList<>();
@@ -55,12 +42,11 @@ public class SparkMaxStreamTest {
     final double[] expectedAppliedValues = {0.8, -0.56, 0.10};
     final double[] expectedPositionValues = {100.1, 109.1, -40054.2};
     final long[] exectedTimestamps = {1000, 1010, 1022};
-    final int canId = 1;
-    int fullApiId = REV_API_ID | canId;
+    final int deviceId = 1;
 
     // Setup stream with consumer which test against expected values
     SparkMaxStream stream =
-        new SparkMaxStream()
+        new SparkMaxStream(deviceId)
             .velocityConsumer(
                 (data) -> {
                   velocityTimestamps.add(data.timestamp);
@@ -102,7 +88,7 @@ public class SparkMaxStreamTest {
       df[1] = stat1;
       df[2] = stat2;
 
-      stream.injectAndPoll(df, exectedTimestamps[i], 1);
+      stream.injectAndPoll(df, exectedTimestamps[i]);
     }
 
     Assertions.assertArrayEquals(
