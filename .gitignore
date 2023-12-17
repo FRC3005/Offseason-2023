@@ -190,3 +190,5 @@ dashboard/Builds
 */__pycache__
 
 char/results/
+
+!libs/tinylog/*.jar

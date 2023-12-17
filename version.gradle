@@ -75,3 +75,6 @@ tasks.register("writeVersion") {
 
 //deploy.targets.roborio.artifacts.frcStaticFileDeploy.dependsOn(writeVersion)
 project.compileJava.dependsOn(writeVersion)
+compileJava {
+    options.encoding = "UTF-8"
+}
