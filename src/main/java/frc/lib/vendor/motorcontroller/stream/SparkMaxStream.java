@@ -1,8 +1,8 @@
 package frc.lib.vendor.motorcontroller.stream;
 
 import edu.wpi.first.hal.CANStreamMessage;
-import frc.lib.telemetrystream.StreamedDouble;
-import frc.lib.telemetrystream.StreamedInteger;
+import frc.lib.telemetrystream.DoubleSample;
+import frc.lib.telemetrystream.IntegerSample;
 import frc.lib.telemetrystream.TelemetryStream;
 import frc.lib.vendor.motorcontroller.stream.SparkMaxFrames.DataFrame;
 import java.util.function.Consumer;
@@ -13,7 +13,7 @@ public class SparkMaxStream {
   // See REV API v1.x for details, or reverse engineer messages using hardware client
   // Grab all REV motor controller frames with API Class 6
   // 0x2051800 | ([Periodic frame number] << 6)
-  private static final int REV_API_ID = 0x2050000 | (0x6 << 10);
+  private static final int REV_API_ID = 0x2051800;
 
   // Match all fields except API id
   private static final int REV_API_MASK = 0x1FFFFC3F;
@@ -53,6 +53,10 @@ public class SparkMaxStream {
     m_stream.stop();
   }
 
+  public void poll() {
+    m_stream.poll();
+  }
+
   // Lazy way to test...
   protected void injectAndPoll(DataFrame[] frames, long timestamp) {
     CANStreamMessage[] messages = new CANStreamMessage[frames.length];
@@ -77,7 +81,7 @@ public class SparkMaxStream {
    *     all recieved applied outputs.
    * @return this
    */
-  public SparkMaxStream appliedOutputConsumer(Consumer<StreamedDouble> consumer) {
+  public SparkMaxStream appliedOutput(Consumer<DoubleSample> consumer) {
     m_stat0Stream.appliedOutputConsumer(consumer);
     return this;
   }
@@ -89,7 +93,7 @@ public class SparkMaxStream {
    *     all recieved sticky faults.
    * @return this
    */
-  public SparkMaxStream stickyFaultsConsumer(Consumer<StreamedInteger> consumer) {
+  public SparkMaxStream stickyFaults(Consumer<IntegerSample> consumer) {
     m_stat0Stream.stickyFaultsConsumer(consumer);
     return this;
   }
@@ -101,7 +105,7 @@ public class SparkMaxStream {
    *     all recieved velocity updates.
    * @return this
    */
-  public SparkMaxStream velocityConsumer(Consumer<StreamedDouble> consumer) {
+  public SparkMaxStream velocity(Consumer<DoubleSample> consumer) {
     m_stat1Stream.velocityConsumer(consumer);
     return this;
   }
@@ -113,7 +117,7 @@ public class SparkMaxStream {
    *     all recieved output current updates.
    * @return this
    */
-  public SparkMaxStream currentConsumer(Consumer<StreamedDouble> consumer) {
+  public SparkMaxStream current(Consumer<DoubleSample> consumer) {
     m_stat1Stream.currentConsumer(consumer);
     return this;
   }
@@ -125,7 +129,7 @@ public class SparkMaxStream {
    *     all recieved supply voltage updates.
    * @return this
    */
-  public SparkMaxStream supplyVoltageConsumer(Consumer<StreamedDouble> consumer) {
+  public SparkMaxStream supplyVoltage(Consumer<DoubleSample> consumer) {
     m_stat1Stream.supplyVoltageConsumer(consumer);
     return this;
   }
@@ -137,7 +141,7 @@ public class SparkMaxStream {
    *     all recieved position updates.
    * @return this
    */
-  public SparkMaxStream positionConsumer(Consumer<StreamedDouble> consumer) {
+  public SparkMaxStream position(Consumer<DoubleSample> consumer) {
     m_stat2Stream.positionConsumer(consumer);
     return this;
   }

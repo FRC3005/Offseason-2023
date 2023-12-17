@@ -4,8 +4,8 @@ import com.revrobotics.CANSparkMax;
 import edu.wpi.first.util.datalog.DataLog;
 import edu.wpi.first.util.datalog.DoubleLogEntry;
 import edu.wpi.first.util.datalog.IntegerLogEntry;
-import frc.lib.telemetrystream.StreamedDouble;
-import frc.lib.telemetrystream.StreamedInteger;
+import frc.lib.telemetrystream.DoubleSample;
+import frc.lib.telemetrystream.IntegerSample;
 import frc.lib.vendor.motorcontroller.stream.SparkMaxStream;
 import java.util.function.Consumer;
 
@@ -15,7 +15,7 @@ public class SparkMaxLogger {
   private final int m_deviceId;
   private final DataLog m_datalog;
 
-  private Consumer<StreamedDouble> LoggedStreamDoubleFactory(String ntEntryName) {
+  private Consumer<DoubleSample> LoggedStreamDouble(String ntEntryName) {
     String fullNtPath = NT_PREFIX + String.valueOf(m_deviceId) + "/" + ntEntryName;
     DoubleLogEntry logEntry = new DoubleLogEntry(m_datalog, fullNtPath);
     return (streamedDouble) -> {
@@ -23,7 +23,7 @@ public class SparkMaxLogger {
     };
   }
 
-  private Consumer<StreamedInteger> LoggedIntegerStreamFactory(String ntEntryName) {
+  private Consumer<IntegerSample> LoggedIntegerStream(String ntEntryName) {
     String fullNtPath = NT_PREFIX + String.valueOf(m_deviceId) + "/" + ntEntryName;
     IntegerLogEntry logEntry = new IntegerLogEntry(m_datalog, fullNtPath);
     return (streamedDouble) -> {
@@ -31,17 +31,17 @@ public class SparkMaxLogger {
     };
   }
 
-  public SparkMaxLogger(CANSparkMax sparkMax, DataLog log) {
+  public SparkMaxLogger(CANSparkMax sparkMax, String deviceName, DataLog log) {
     m_deviceId = sparkMax.getDeviceId();
     m_datalog = log;
     m_stream =
         new SparkMaxStream(m_deviceId)
-            .appliedOutputConsumer(LoggedStreamDoubleFactory("appliedOutput"))
-            .stickyFaultsConsumer(LoggedIntegerStreamFactory("stickyFaults"))
-            .currentConsumer(LoggedStreamDoubleFactory("outputCurrent"))
-            .velocityConsumer(LoggedStreamDoubleFactory("velocity"))
-            .positionConsumer(LoggedStreamDoubleFactory("position"))
-            .supplyVoltageConsumer(LoggedStreamDoubleFactory("supplyVoltage"));
+            .appliedOutput(LoggedStreamDouble("appliedOutput"))
+            .stickyFaults(LoggedIntegerStream("stickyFaults"))
+            .current(LoggedStreamDouble("outputCurrent"))
+            .velocity(LoggedStreamDouble("velocity"))
+            .position(LoggedStreamDouble("position"))
+            .supplyVoltage(LoggedStreamDouble("supplyVoltage"));
   }
 
   public void start() {
@@ -50,5 +50,9 @@ public class SparkMaxLogger {
 
   public void stop() {
     m_stream.stop();
+  }
+
+  public void poll() {
+    m_stream.poll();
   }
 }

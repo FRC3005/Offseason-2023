@@ -1,6 +1,6 @@
 package frc.lib.telemetrystream;
 
-public final class StreamedDouble {
+public final class DoubleSample {
   /**
    * Create a timestamped value.
    *
@@ -8,7 +8,7 @@ public final class StreamedDouble {
    * @param deviceId the device Id of the frame.
    * @param value value
    */
-  public StreamedDouble(long timestamp, int deviceId, double value) {
+  public DoubleSample(long timestamp, int deviceId, double value) {
     this.timestamp = timestamp;
     this.deviceId = deviceId;
     this.value = value;

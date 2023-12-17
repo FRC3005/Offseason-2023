@@ -47,25 +47,25 @@ public class SparkMaxStreamTest {
     // Setup stream with consumer which test against expected values
     SparkMaxStream stream =
         new SparkMaxStream(deviceId)
-            .velocityConsumer(
+            .velocity(
                 (data) -> {
                   velocityTimestamps.add(data.timestamp);
                   velocityValues.add(data.value);
                   Assertions.assertEquals(1, data.deviceId);
                 })
-            .currentConsumer(
+            .current(
                 (data) -> {
                   currentTimestamps.add(data.timestamp);
                   currentValues.add(data.value);
                   Assertions.assertEquals(1, data.deviceId);
                 })
-            .appliedOutputConsumer(
+            .appliedOutput(
                 (data) -> {
                   appliedTimestamps.add(data.timestamp);
                   appliedValues.add(data.value);
                   Assertions.assertEquals(1, data.deviceId);
                 })
-            .positionConsumer(
+            .position(
                 (data) -> {
                   positionTimestamps.add(data.timestamp);
                   positionValues.add(data.value);

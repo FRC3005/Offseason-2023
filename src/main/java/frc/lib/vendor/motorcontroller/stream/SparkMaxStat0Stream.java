@@ -1,21 +1,21 @@
 package frc.lib.vendor.motorcontroller.stream;
 
-import frc.lib.telemetrystream.StreamedDouble;
+import frc.lib.telemetrystream.DoubleSample;
 import frc.lib.telemetrystream.StreamedFrame;
-import frc.lib.telemetrystream.StreamedInteger;
+import frc.lib.telemetrystream.IntegerSample;
 import java.util.function.Consumer;
 
 public class SparkMaxStat0Stream implements StreamedFrame {
   private final SparkMaxFrames.Status0In frame = new SparkMaxFrames.Status0In();
-  private Consumer<StreamedDouble> m_appliedOutputConsumer = null;
-  private Consumer<StreamedInteger> m_stickyFaultsConsumer = null;
+  private Consumer<DoubleSample> m_appliedOutputConsumer = null;
+  private Consumer<IntegerSample> m_stickyFaultsConsumer = null;
 
-  public SparkMaxStat0Stream appliedOutputConsumer(Consumer<StreamedDouble> consumer) {
+  public SparkMaxStat0Stream appliedOutputConsumer(Consumer<DoubleSample> consumer) {
     m_appliedOutputConsumer = consumer;
     return this;
   }
 
-  public SparkMaxStat0Stream stickyFaultsConsumer(Consumer<StreamedInteger> consumer) {
+  public SparkMaxStat0Stream stickyFaultsConsumer(Consumer<IntegerSample> consumer) {
     m_stickyFaultsConsumer = consumer;
     return this;
   }
@@ -30,12 +30,12 @@ public class SparkMaxStat0Stream implements StreamedFrame {
 
     if (m_appliedOutputConsumer != null) {
       m_appliedOutputConsumer.accept(
-          new StreamedDouble(timestamp, arbid & 0x3F, frame.getAppliedOutput()));
+          new DoubleSample(timestamp, arbid & 0x3F, frame.getAppliedOutput()));
     }
 
     if (m_stickyFaultsConsumer != null) {
       m_stickyFaultsConsumer.accept(
-          new StreamedInteger(timestamp, arbid & 0x3F, (int) frame.stickyFaults));
+          new IntegerSample(timestamp, arbid & 0x3F, (int) frame.stickyFaults));
     }
   }
 }

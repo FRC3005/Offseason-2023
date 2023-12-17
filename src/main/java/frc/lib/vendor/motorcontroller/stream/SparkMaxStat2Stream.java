@@ -1,14 +1,14 @@
 package frc.lib.vendor.motorcontroller.stream;
 
-import frc.lib.telemetrystream.StreamedDouble;
+import frc.lib.telemetrystream.DoubleSample;
 import frc.lib.telemetrystream.StreamedFrame;
 import java.util.function.Consumer;
 
 public class SparkMaxStat2Stream implements StreamedFrame {
   private final SparkMaxFrames.Status2In frame = new SparkMaxFrames.Status2In();
-  private Consumer<StreamedDouble> m_positionConsumer = null;
+  private Consumer<DoubleSample> m_positionConsumer = null;
 
-  public SparkMaxStat2Stream positionConsumer(Consumer<StreamedDouble> consumer) {
+  public SparkMaxStat2Stream positionConsumer(Consumer<DoubleSample> consumer) {
     m_positionConsumer = consumer;
     return this;
   }
@@ -22,7 +22,7 @@ public class SparkMaxStat2Stream implements StreamedFrame {
     frame.Deserialize(data);
 
     if (m_positionConsumer != null) {
-      m_positionConsumer.accept(new StreamedDouble(timestamp, arbid & 0x3F, frame.getPosition()));
+      m_positionConsumer.accept(new DoubleSample(timestamp, arbid & 0x3F, frame.getPosition()));
     }
   }
 }

@@ -10,6 +10,9 @@ public class TelemetryStream {
   private final int m_canStreamSession;
   private final int m_bufferSizeWords;
 
+  // Preallocate and keep this buffer to prevent object creation each loop
+  CANStreamMessage[] m_messageBuffer;
+
   private static final int DEFAULT_BUFFER_SIZE = 64;
 
   private final List<StreamedFrame> m_frames = new ArrayList<>();
@@ -49,8 +52,13 @@ public class TelemetryStream {
   public TelemetryStream(int arbId, int idMask, int bufferSizeWords) {
     m_bufferSizeWords = bufferSizeWords;
     m_canStreamSession = CANJNI.openCANStreamSession(arbId, idMask, m_bufferSizeWords);
+    m_messageBuffer = new CANStreamMessage[m_bufferSizeWords];
+    for (int i= 0; i < m_bufferSizeWords; i++) {
+      m_messageBuffer[i] = new CANStreamMessage();
+    }
 
     if (m_canStreamSession == 0) {
+      // TODO: Should this throw? I believe WPILib will already send some kind of message
       // throw new Exception("Failed to open CAN Stream");
     }
   }
@@ -74,18 +82,20 @@ public class TelemetryStream {
    */
   public ErrorCode poll() {
     ErrorCode errorCode = ErrorCode.OK;
-    CANStreamMessage[] messages = new CANStreamMessage[m_bufferSizeWords];
 
     // TODO: Check result
-    int result = CANJNI.readCANStreamSession(m_canStreamSession, messages, m_bufferSizeWords);
+    int numToRead = CANJNI.readCANStreamSession(m_canStreamSession, m_messageBuffer, m_bufferSizeWords);
 
     if (!m_enabled.get()) {
       return ErrorCode.OK;
     }
 
-    for (CANStreamMessage message : messages) {
-      // TODO: mutex this
-      messageMatch(message);
+    for (int i = 0; i < numToRead; i++) {
+      var message = m_messageBuffer[i];
+      if (message != null) {
+        // TODO: mutex this
+        messageMatch(message);
+      }
     }
 
     return errorCode;

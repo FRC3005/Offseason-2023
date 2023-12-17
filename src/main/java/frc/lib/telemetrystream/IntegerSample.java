@@ -1,6 +1,6 @@
 package frc.lib.telemetrystream;
 
-public final class StreamedInteger {
+public final class IntegerSample {
   /**
    * Create a timestamped value.
    *
@@ -8,7 +8,7 @@ public final class StreamedInteger {
    * @param deviceId the device Id of the frame.
    * @param value value
    */
-  public StreamedInteger(long timestamp, int deviceId, int value) {
+  public IntegerSample(long timestamp, int deviceId, int value) {
     this.timestamp = timestamp;
     this.deviceId = deviceId;
     this.value = value;
