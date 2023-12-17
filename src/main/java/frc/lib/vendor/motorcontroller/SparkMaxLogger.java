@@ -11,12 +11,13 @@ import java.util.function.Consumer;
 
 public class SparkMaxLogger {
   private final SparkMaxStream m_stream;
-  private static final String NT_PREFIX = "/sparkmaxlog/";
+  private static final String NT_PREFIX = "/hslog/sparkmax/";
   private final int m_deviceId;
   private final DataLog m_datalog;
+  private final String m_name;
 
   private Consumer<DoubleSample> LoggedStreamDouble(String ntEntryName) {
-    String fullNtPath = NT_PREFIX + String.valueOf(m_deviceId) + "/" + ntEntryName;
+    String fullNtPath = NT_PREFIX + m_name + "/" + ntEntryName;
     DoubleLogEntry logEntry = new DoubleLogEntry(m_datalog, fullNtPath);
     return (streamedDouble) -> {
       logEntry.append(streamedDouble.value, streamedDouble.timestamp);
@@ -24,16 +25,21 @@ public class SparkMaxLogger {
   }
 
   private Consumer<IntegerSample> LoggedIntegerStream(String ntEntryName) {
-    String fullNtPath = NT_PREFIX + String.valueOf(m_deviceId) + "/" + ntEntryName;
+    String fullNtPath = NT_PREFIX + m_name + "/" + ntEntryName;
     IntegerLogEntry logEntry = new IntegerLogEntry(m_datalog, fullNtPath);
     return (streamedDouble) -> {
       logEntry.append(streamedDouble.value, streamedDouble.timestamp);
     };
   }
 
+  public SparkMaxLogger(CANSparkMax sparkMax, DataLog log) {
+    this(sparkMax, String.valueOf(sparkMax.getDeviceId()), log);
+  }
+
   public SparkMaxLogger(CANSparkMax sparkMax, String deviceName, DataLog log) {
     m_deviceId = sparkMax.getDeviceId();
     m_datalog = log;
+    m_name = deviceName;
     m_stream =
         new SparkMaxStream(m_deviceId)
             .appliedOutput(LoggedStreamDouble("appliedOutput"))
