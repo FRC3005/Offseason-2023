@@ -1,8 +1,8 @@
 package frc.lib.vendor.motorcontroller.stream;
 
 import frc.lib.telemetrystream.DoubleSample;
-import frc.lib.telemetrystream.StreamedFrame;
 import frc.lib.telemetrystream.IntegerSample;
+import frc.lib.telemetrystream.StreamedFrame;
 import java.util.function.Consumer;
 
 public class SparkMaxStat0Stream implements StreamedFrame {

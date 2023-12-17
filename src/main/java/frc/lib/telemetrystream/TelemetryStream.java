@@ -53,7 +53,7 @@ public class TelemetryStream {
     m_bufferSizeWords = bufferSizeWords;
     m_canStreamSession = CANJNI.openCANStreamSession(arbId, idMask, m_bufferSizeWords);
     m_messageBuffer = new CANStreamMessage[m_bufferSizeWords];
-    for (int i= 0; i < m_bufferSizeWords; i++) {
+    for (int i = 0; i < m_bufferSizeWords; i++) {
       m_messageBuffer[i] = new CANStreamMessage();
     }
 
@@ -84,7 +84,8 @@ public class TelemetryStream {
     ErrorCode errorCode = ErrorCode.OK;
 
     // TODO: Check result
-    int numToRead = CANJNI.readCANStreamSession(m_canStreamSession, m_messageBuffer, m_bufferSizeWords);
+    int numToRead =
+        CANJNI.readCANStreamSession(m_canStreamSession, m_messageBuffer, m_bufferSizeWords);
 
     if (!m_enabled.get()) {
       return ErrorCode.OK;

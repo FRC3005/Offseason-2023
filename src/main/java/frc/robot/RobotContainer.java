@@ -4,27 +4,22 @@
 
 package frc.robot;
 
-import frc.lib.util.ThreadUtils;
-import frc.lib.vendor.motorcontroller.SparkMaxLogger;
-import frc.lib.vendor.motorcontroller.stream.SparkMaxStream;
-import frc.robot.subsystems.ExampleSubsystem;
-
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.CANSparkMaxLowLevel.PeriodicFrame;
-
 import edu.wpi.first.util.datalog.DataLog;
 import edu.wpi.first.util.datalog.DoubleLogEntry;
 import edu.wpi.first.util.datalog.IntegerLogEntry;
 import edu.wpi.first.wpilibj.DataLogManager;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.lib.util.ThreadUtils;
+import frc.lib.vendor.motorcontroller.SparkMaxLogger;
+import frc.robot.subsystems.ExampleSubsystem;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -80,9 +75,7 @@ public class RobotContainer {
    * PS4} controllers or {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight
    * joysticks}.
    */
-  private void configureBindings() {
-
-  }
+  private void configureBindings() {}
 
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
@@ -90,31 +83,39 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    return Commands.run(() -> {m_sparkMax.set(0.2);})
-    .alongWith(Commands.repeatingSequence(new InstantCommand(() -> {
-
-    m_sparkMaxLogger.start();
-      long timestamp = System.nanoTime() / 1000000;
-      m_slowVelocityLogger.append(m_sparkMax.getEncoder().getVelocity(), timestamp);
-      m_slowPositionLogger.append(m_sparkMax.getEncoder().getPosition(), timestamp);
-      m_slowSupplyVoltageLogger.append(m_sparkMax.getBusVoltage(), timestamp);
-      m_monotonicTimestampLogger.append(System.nanoTime() / 1000, timestamp);
-      m_sparkMaxLogger.poll();
-    })))
-    .raceWith(Commands.waitSeconds(5))
-    .andThen(() -> {m_sparkMax.set(0);
-    m_sparkMaxLogger.stop();});
+    return Commands.run(
+            () -> {
+              m_sparkMax.set(0.2);
+            })
+        .alongWith(
+            Commands.repeatingSequence(
+                new InstantCommand(
+                    () -> {
+                      m_sparkMaxLogger.start();
+                      long timestamp = System.nanoTime() / 1000000;
+                      m_slowVelocityLogger.append(m_sparkMax.getEncoder().getVelocity(), timestamp);
+                      m_slowPositionLogger.append(m_sparkMax.getEncoder().getPosition(), timestamp);
+                      m_slowSupplyVoltageLogger.append(m_sparkMax.getBusVoltage(), timestamp);
+                      m_monotonicTimestampLogger.append(System.nanoTime() / 1000, timestamp);
+                      m_sparkMaxLogger.poll();
+                    })))
+        .raceWith(Commands.waitSeconds(5))
+        .andThen(
+            () -> {
+              m_sparkMax.set(0);
+              m_sparkMaxLogger.stop();
+            });
   }
-  
-  public void disabledInit() {
 
-  }
+  public void disabledInit() {}
 
   public void disabledPeriodic() {}
+
   public void autonInit() {}
-  public void teleopInit() {
-    
-  }
+
+  public void teleopInit() {}
+
   public void testModeInit() {}
+
   public void testModePeriodic() {}
 }
