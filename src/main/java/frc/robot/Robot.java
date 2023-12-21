@@ -4,18 +4,20 @@
 
 package frc.robot;
 
+import edu.wpi.first.hal.HALUtil;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.CAN;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.lib.telemetry.TelemetryRunner;
 import frc.lib.util.Version;
-import frc.lib.web.StaticHTTPServer;
 import frc.robot.constants.RobotConstants;
 import org.tinylog.Logger;
 
@@ -27,7 +29,7 @@ import org.tinylog.Logger;
  */
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
-  private SwerveBot m_robotContainer;
+  private RobotContainer m_robotContainer;
   private static final double kLoggerPeriod = 0.02;
 
   // Use for uptime counter, always off by default, then on on enable
@@ -48,9 +50,16 @@ public class Robot extends TimedRobot {
 
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
-    m_robotContainer = new SwerveBot();
-    addPeriodic(m_robotContainer::logPeriodic, kLoggerPeriod);
-  
+    m_robotContainer = new RobotContainer();
+    //addPeriodic(m_robotContainer::logPeriodic, kLoggerPeriod);
+    addPeriodic(() -> {
+      var sysclock = System.nanoTime() / 1000;
+      var cantime = CAN.getTimestampBaseTime();
+      var fpgaTime = HALUtil.getFPGATime();
+      var delta = sysclock - fpgaTime;
+      System.out.println("Sysclock - FPGA Time " + sysclock + " - " + fpgaTime + " = " + delta);
+    }, 0.5);
+
     // StaticHTTPServer.startServer(null);
 
     Logger.tag("RobotMain")

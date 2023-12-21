@@ -4,7 +4,6 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxHandle;
 import com.revrobotics.MotorFeedbackSensor;
 import com.revrobotics.REVLibError;
-import com.revrobotics.SparkMaxPIDController;
 import edu.wpi.first.wpilibj.Timer;
 import frc.lib.controller.Controller;
 import frc.lib.controller.PIDGains;
@@ -41,17 +40,14 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
 
   private static SparkMaxMonitor s_monitor = new SparkMaxMonitor();
 
-  private static final int VELOCITY_GAIN_SLOT = 0;
-  private static final int POSITION_GAIN_SLOT = 1;
-  private static final int SMART_MOTION_GAIN_SLOT = 2;
-
   /**
    * Reinitialize the SparkMax by running through all mutations on the object in order.
    *
    * @return true if reinitialized correctly
    */
   private boolean reinitFunction() {
-    Logger.tag("SparkMax").debug("===Reinitializing!! SparkMax with Id {} ({})===", getDeviceId(), m_name);
+    Logger.tag("SparkMax")
+        .debug("===Reinitializing!! SparkMax with Id {} ({})===", getDeviceId(), m_name);
     for (var fcn : m_mutatorChain) {
       if (!fcn.apply(this, false)) {
         return false;
@@ -69,6 +65,7 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
    *     is used to initialize the CANSparkMax device, and is called in one of two places. 1) It is
    *     called in this constructor, and 2) it is called in the case of a health monitor timeout
    *     (i.e. the controller has reset)
+   * @param name assign a name to this controller
    */
   public SparkMax(int canId, MotorType motorType, String name) {
     super(canId, motorType);
@@ -107,6 +104,10 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
     this(canId, MotorType.kBrushless, String.valueOf(canId));
   }
 
+  public SparkMax(int canId, MotorType motorType) {
+    this(canId, motorType, String.valueOf(canId));
+  }
+
   public SparkMax(int canId, String name) {
     this(canId, MotorType.kBrushless, name);
   }
@@ -139,7 +140,8 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
       setAttemptNumber++;
 
       if (setAttemptNumber >= kParameterSetAttemptCount) {
-        Logger.tag("Spark Max").error("Spark Max ID {} ({}): Failed to initialize!!", getDeviceId(), m_name);
+        Logger.tag("Spark Max")
+            .error("Spark Max ID {} ({}): Failed to initialize!!", getDeviceId(), m_name);
         Faults.subsystem("SparkMax").fatal("Initialize for SPARK MAX: " + m_name);
         break;
       }
@@ -202,18 +204,6 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
   }
 
   /**
-   * Create an encoder object based on the Spark Max internal encoder
-   *
-   * @return Encoder object
-   */
-  public Encoder builtinEncoder() {
-    return new EncoderSupplier(
-        () -> getEncoder().getVelocity(),
-        () -> getEncoder().getPosition(),
-        pos -> getEncoder().setPosition(pos));
-  }
-
-  /**
    * Create a profiled PID controller based on the spark max smart motion
    *
    * @param gains
@@ -228,16 +218,30 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
               SparkMaxUtils.check(
                   sparkMax
                       .getPIDController()
-                      .setSmartMotionMaxAccel(constraints.maxAcceleration, SMART_MOTION_GAIN_SLOT));
+                      .setSmartMotionMaxAccel(
+                          constraints.maxAcceleration, SparkMaxController.SMART_MOTION_GAIN_SLOT));
           errors +=
               SparkMaxUtils.check(
                   sparkMax
                       .getPIDController()
-                      .setSmartMotionMaxVelocity(constraints.maxVelocity, SMART_MOTION_GAIN_SLOT));
+                      .setSmartMotionMaxVelocity(
+                          constraints.maxVelocity, SparkMaxController.SMART_MOTION_GAIN_SLOT));
           return errors == 0;
         });
     return new SparkMaxController(
         this, getPIDController(), ControlType.kPosition, gains, -1.0, 1.0);
+  }
+
+  /**
+   * Create an encoder object based on the Spark Max internal encoder
+   *
+   * @return Encoder object
+   */
+  public Encoder builtinEncoder() {
+    return new EncoderSupplier(
+        () -> getEncoder().getVelocity(),
+        () -> getEncoder().getPosition(),
+        pos -> getEncoder().setPosition(pos));
   }
 
   /**
@@ -253,6 +257,14 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
    */
   public boolean mutate(BiFunction<CANSparkMax, Boolean, Boolean> fcn) {
     Boolean result = fcn.apply(this, true);
+
+    if (m_burnFlashCnt > 0) {
+      Logger.tag("SparkMax Controller")
+          .warn(
+              "Running mutate function after burn flash. CanID {}, FlashCnt {}",
+              getDeviceId(),
+              m_burnFlashCnt);
+    }
 
     int setAttemptNumber = 0;
     while (result == null || result != true) {
@@ -352,148 +364,6 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
    */
   public static void setFrameStrategy(CANSparkMax sparkMax, FrameStrategy strategy) {
     setFrameStrategy(sparkMax, strategy, false);
-  }
-
-  public class SparkMaxController implements Controller {
-    // Cache gains so 'get' commands don't go out on CAN
-    // 4 gain slots in spark max
-    private final SparkMax m_sparkMax;
-    private PIDGains m_gainsCached = new PIDGains();
-    private SparkMaxPIDController m_sparkMaxController;
-    private Constraints m_constraintsCached = new Constraints(0.0, 0.0);
-    private int m_slot;
-    private ControlType m_controlType;
-
-    private double m_minimumInput = 0.0;
-    private double m_maximumInput = 0.0;
-    private boolean m_continuous = false;
-
-    protected SparkMaxController(
-        SparkMax sparkMax,
-        SparkMaxPIDController pid,
-        ControlType type,
-        PIDGains gains,
-        double minOutput,
-        double maxOutput) {
-      m_sparkMax = sparkMax;
-      m_sparkMaxController = pid;
-      m_controlType = type;
-      if (type == ControlType.kPosition) {
-        m_slot = POSITION_GAIN_SLOT;
-      } else if (type == ControlType.kVelocity) {
-        m_slot = VELOCITY_GAIN_SLOT;
-      } else if (type == ControlType.kSmartMotion) {
-        m_slot = SMART_MOTION_GAIN_SLOT;
-      }
-      m_gainsCached = gains;
-
-      // Add this to mutate list so it is reset if controller resets
-      sparkMax.mutate(
-          (cansparkmax, firstCall) -> {
-            int errors = 0;
-            errors += SparkMaxUtils.check(m_sparkMaxController.setP(gains.P, m_slot));
-            errors += SparkMaxUtils.check(m_sparkMaxController.setI(gains.I, m_slot));
-            errors += SparkMaxUtils.check(m_sparkMaxController.setD(gains.D, m_slot));
-            errors +=
-                SparkMaxUtils.check(
-                    m_sparkMaxController.setOutputRange(minOutput, maxOutput, m_slot));
-            return errors == 0;
-          });
-
-      if (m_burnFlashCnt > 0) {
-        Logger.tag("SparkMax Controller")
-            .warn(
-                "Creating a SparkMax Controller after burning flash, settings will not be burned. CanID {}, FlashCnt {}",
-                sparkMax.getDeviceId(),
-                m_burnFlashCnt);
-      }
-    }
-
-    /**
-     * Initialize a sendable for tuning the velocity controller PID constants at run time
-     *
-     * @param builder Builder passed in during initSendable
-     */
-    private void controllerInitSendable(TelemetryBuilder builder, int slot) {
-      builder.setSmartDashboardType("PIDController");
-      builder.setActuator(true);
-      builder.addDoubleProperty(
-          "p",
-          () -> m_gainsCached.P,
-          (val) -> {
-            m_gainsCached.P = val;
-            m_sparkMaxController.setP(val, slot);
-          });
-      builder.addDoubleProperty(
-          "i",
-          () -> m_gainsCached.I,
-          (val) -> {
-            m_gainsCached.I = val;
-            m_sparkMaxController.setI(val, slot);
-          });
-      builder.addDoubleProperty(
-          "d",
-          () -> m_gainsCached.D,
-          (val) -> {
-            m_gainsCached.D = val;
-            m_sparkMaxController.setD(val, slot);
-          });
-
-      if (slot != SMART_MOTION_GAIN_SLOT) {
-        return;
-      }
-
-      builder.addDoubleProperty(
-          "max accel",
-          () -> m_constraintsCached.maxAcceleration,
-          (val) -> {
-            m_constraintsCached.maxAcceleration = val;
-            m_sparkMaxController.setSmartMotionMaxAccel(val, SMART_MOTION_GAIN_SLOT);
-          });
-
-      builder.addDoubleProperty(
-          "max velocity",
-          () -> m_constraintsCached.maxVelocity,
-          (val) -> {
-            m_constraintsCached.maxVelocity = val;
-            m_sparkMaxController.setSmartMotionMaxVelocity(val, SMART_MOTION_GAIN_SLOT);
-          });
-    }
-
-    @Override
-    public void bind(TelemetryBuilder builder) {
-      controllerInitSendable(builder, m_slot);
-    }
-
-    @Override
-    public void setReference(double reference, double feedforward) {
-      m_sparkMaxController.setReference(reference, m_controlType, m_slot, feedforward);
-    }
-
-    @Override
-    public void enableContinuousInput(double minimumInput, double maximumInput) {
-      // Implementation requires this currently
-      assert minimumInput <= 0.0;
-      assert maximumInput >= 0.0;
-
-      m_continuous = true;
-      m_minimumInput = minimumInput;
-      m_maximumInput = maximumInput;
-      this.m_sparkMaxController.setPositionPIDWrappingEnabled(true);
-      this.m_sparkMaxController.setPositionPIDWrappingMaxInput(maximumInput);
-      this.m_sparkMaxController.setPositionPIDWrappingMinInput(minimumInput);
-    }
-
-    @Override
-    public void disableContinuousInput() {
-      m_continuous = false;
-      this.m_sparkMaxController.setPositionPIDWrappingEnabled(false);
-    }
-
-    @Override
-    public boolean isContinuousInputEnabled() {
-      return m_continuous;
-    }
   }
 
   public SparkMax withFollower(SparkMax follower) {
