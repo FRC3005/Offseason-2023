@@ -4,12 +4,11 @@
 
 package frc.robot;
 
-import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.DataLogManager;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.button.JoystickButton;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.lib.auton.AutonChooser;
 import frc.lib.telemetry.TelemetryRunner;
 import frc.lib.util.JoystickUtil;
@@ -19,7 +18,6 @@ import frc.lib.vendor.sensor.ADIS16470;
 import frc.lib.vendor.sensor.ADIS16470.ADIS16470CalibrationTime;
 import frc.robot.constants.*;
 import frc.robot.subsystems.drive.DriveSubsystem;
-import frc.robot.subsystems.robotstate.RobotState;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -35,14 +33,14 @@ public class SwerveBot {
               : ADIS16470CalibrationTime._1s);
   private final DriveSubsystem m_drive = new DriveSubsystem(m_gyro);
 
-  XboxController m_driveController = new XboxController(OIConstants.kDriverControllerPort);
-
-  private final RobotState m_robotState = RobotState.getInstance(m_drive, m_gyro);
+  CommandXboxController m_driveController =
+      new CommandXboxController(OIConstants.kDriverControllerPort);
 
   private String m_selectedAutonName = "";
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public SwerveBot() {
+
     // ALL Spark Maxes should have already been initialized by this point
     SparkMax.burnFlashInSync();
 
@@ -50,11 +48,8 @@ public class SwerveBot {
     configureButtonBindings();
     configureTestModeBindings();
 
-    SmartDashboard.putData("JVM", new SendableJVM());
-    SmartDashboard.putNumber("Slow Mode Drive Scalar", 0.6);
-    SmartDashboard.putNumber("Slow Mode Turn Scalar", 0.6);
-
     TelemetryRunner.getDefault().bind(m_drive);
+    TelemetryRunner.getDefault().bindSendable(new SendableJVM());
   }
 
   private void configureButtonBindings() {
@@ -63,36 +58,24 @@ public class SwerveBot {
      *************************************************/
 
     m_drive.setDefaultCommand(
-        new RunCommand(
+        Commands.run(
                 () -> {
-                  var fastMode = m_driveController.getLeftStickButton();
-                  double driveScalar = 0.6;
-                  double turnScalar = 0.6;
-                  if (fastMode) {
-                    driveScalar = 1.0;
-                    turnScalar = 1.0;
-                  }
                   var leftY =
                       JoystickUtil.squareAxis(
-                          -m_driveController.getLeftY(), OIConstants.kDriveDeadband, driveScalar);
+                          -m_driveController.getLeftY(), OIConstants.kDriveDeadband);
                   var leftX =
                       JoystickUtil.squareAxis(
-                          -m_driveController.getLeftX(), OIConstants.kDriveDeadband, driveScalar);
+                          -m_driveController.getLeftX(), OIConstants.kDriveDeadband);
                   var rightX =
                       JoystickUtil.squareAxis(
-                          -m_driveController.getRightX(), OIConstants.kDriveDeadband, turnScalar);
+                          -m_driveController.getRightX(), OIConstants.kDriveDeadband);
                   // Set robot oriented in slow mode
                   m_drive.drive(leftY, leftX, rightX, true);
                 },
                 m_drive)
             .withName("Default Drive"));
 
-    new JoystickButton(m_driveController, XboxController.Button.kRightStick.value)
-        .onFalse(
-            Commands.runOnce(
-                () -> {
-                  m_drive.zeroHeading();
-                }));
+    m_driveController.rightStick().onFalse(Commands.runOnce(() -> m_drive.zeroHeading()));
 
     /*************************************************
      * Combined controls
@@ -101,6 +84,10 @@ public class SwerveBot {
     /*************************************************
      * Operator controls
      *************************************************/
+
+  }
+
+  public void logPeriodic() {
 
   }
 
@@ -120,7 +107,6 @@ public class SwerveBot {
    */
   public void testModePeriodic() {
     m_drive.testPeriodic();
-    m_robotState.testModePeriodic();
   }
 
   /**

@@ -15,6 +15,7 @@ import frc.lib.telemetry.TelemetryBuilder;
 import frc.lib.telemetry.TelemetryNode;
 import frc.lib.util.AccessOrderHashSet;
 import frc.lib.util.Constraints;
+import frc.lib.util.Faults;
 import frc.robot.Robot;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,7 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
   private List<SparkMax> m_followers = new ArrayList<>();
   private final int kParameterSetAttemptCount = 5;
   private final CANSparkMaxHandle m_sparkMaxHandle;
+  private final String m_name;
 
   /**
    * Store a reference to every spark max.
@@ -44,22 +46,12 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
   private static final int SMART_MOTION_GAIN_SLOT = 2;
 
   /**
-   * Monitor the Spark Max to check for reset. This is used by the health monitor to automatically
-   * re-initialize the spark max in case of reboot.
-   *
-   * @param sparkMax Spark Max object to monitor
-   * @return True if the device has reset
-   */
-  private static boolean sparkmaxMonitorFunction(CANSparkMax sparkMax) {
-    return sparkMax.getStickyFault(FaultID.kHasReset);
-  }
-
-  /**
    * Reinitialize the SparkMax by running through all mutations on the object in order.
    *
    * @return true if reinitialized correctly
    */
   private boolean reinitFunction() {
+    Logger.tag("SparkMax").debug("===Reinitializing!! SparkMax with Id {} ({})===", getDeviceId(), m_name);
     for (var fcn : m_mutatorChain) {
       if (!fcn.apply(this, false)) {
         return false;
@@ -78,25 +70,24 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
    *     called in this constructor, and 2) it is called in the case of a health monitor timeout
    *     (i.e. the controller has reset)
    */
-  public SparkMax(int canId, MotorType motorType) {
+  public SparkMax(int canId, MotorType motorType, String name) {
     super(canId, motorType);
+    m_name = name;
 
     // Always start fresh and apply settings in code for each device
     // Add delay to avoid any possible timing issues.
     restoreFactoryDefaults();
     Timer.delay(0.050);
 
-    // If a parameter set fails, this will add more time to alleviate any bus traffic
-    // default is 20ms
     setCANTimeout(50);
 
     // Steal the private handle to poke around the internals
     m_sparkMaxHandle = new CANSparkMaxHandle(this);
 
     m_mutatorChain = new AccessOrderHashSet<>();
-    HealthMonitor.monitor(() -> sparkmaxMonitorFunction(this), () -> reinitFunction());
+    HealthMonitor.monitor(() -> this.getStickyFault(FaultID.kHasReset), () -> reinitFunction());
     m_sparkMaxes.add(this);
-    Logger.tag("SparkMax").debug("Initializing SparkMax with Id {}", canId);
+    Logger.tag("SparkMax").debug("Initializing SparkMax with Id {} ({})", canId, m_name);
     if (m_burnFlashCnt > 0) {
       Logger.tag("SparkMax")
           .warn(
@@ -113,7 +104,11 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
    * @param canId Spark Max CAN Id
    */
   public SparkMax(int canId) {
-    this(canId, MotorType.kBrushless);
+    this(canId, MotorType.kBrushless, String.valueOf(canId));
+  }
+
+  public SparkMax(int canId, String name) {
+    this(canId, MotorType.kBrushless, name);
   }
 
   /**
@@ -136,14 +131,16 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
     while (initialize.apply(this, true) != true) {
       Logger.tag("Spark Max")
           .warn(
-              "Spark Max ID {}: Failed to initialize, attempt {} of {}",
+              "Spark Max ID {} ({}): Failed to initialize, attempt {} of {}",
               getDeviceId(),
+              m_name,
               setAttemptNumber,
               kParameterSetAttemptCount);
       setAttemptNumber++;
 
       if (setAttemptNumber >= kParameterSetAttemptCount) {
-        Logger.tag("Spark Max").error("Spark Max ID {}: Failed to initialize!!", getDeviceId());
+        Logger.tag("Spark Max").error("Spark Max ID {} ({}): Failed to initialize!!", getDeviceId(), m_name);
+        Faults.subsystem("SparkMax").fatal("Initialize for SPARK MAX: " + m_name);
         break;
       }
     }
@@ -261,8 +258,9 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
     while (result == null || result != true) {
       Logger.tag("Spark Max")
           .warn(
-              "Spark Max ID {}: Failed to run mutator, attempt {} of {}",
+              "Spark Max ID {} ({}): Failed to run mutator, attempt {} of {}",
               getDeviceId(),
+              m_name,
               setAttemptNumber,
               kParameterSetAttemptCount);
       setAttemptNumber++;
@@ -511,8 +509,13 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
     return this;
   }
 
+  public String getName() {
+    return m_name;
+  }
+
   @Override
   public void bind(TelemetryBuilder builder) {
+    builder.addStringProperty("Name", this::getName, null);
     builder.addIntegerProperty("ID", this::getDeviceId, null);
     builder.addDoubleProperty("Current", this::getOutputCurrent, null);
     builder.addDoubleProperty("Applied Output", this::getAppliedOutput, null);

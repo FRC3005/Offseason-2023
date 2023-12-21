@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.lib.telemetry.TelemetryRunner;
 import frc.lib.util.Version;
+import frc.lib.web.StaticHTTPServer;
 import frc.robot.constants.RobotConstants;
 import org.tinylog.Logger;
 
@@ -26,7 +27,8 @@ import org.tinylog.Logger;
  */
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
-  private RobotContainer m_robotContainer;
+  private SwerveBot m_robotContainer;
+  private static final double kLoggerPeriod = 0.02;
 
   // Use for uptime counter, always off by default, then on on enable
   PowerDistribution pd = new PowerDistribution(1, ModuleType.kRev);
@@ -40,14 +42,16 @@ public class Robot extends TimedRobot {
     // Start logging before anything else
     DataLogManager.start();
     LogConfig.config();
-    // StaticHTTPServer.startServer(null);
 
     DriverStation.silenceJoystickConnectionWarning(!RobotConstants.kCompetitionMode);
     DriverStation.startDataLog(DataLogManager.getLog());
 
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
-    m_robotContainer = new RobotContainer();
+    m_robotContainer = new SwerveBot();
+    addPeriodic(m_robotContainer::logPeriodic, kLoggerPeriod);
+  
+    // StaticHTTPServer.startServer(null);
 
     Logger.tag("RobotMain")
         .info(
