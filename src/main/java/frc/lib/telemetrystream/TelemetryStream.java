@@ -83,7 +83,6 @@ public class TelemetryStream {
   public ErrorCode poll() {
     ErrorCode errorCode = ErrorCode.OK;
 
-    // TODO: Check result
     int numToRead =
         CANJNI.readCANStreamSession(m_canStreamSession, m_messageBuffer, m_bufferSizeWords);
 

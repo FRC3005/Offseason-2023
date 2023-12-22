@@ -4,6 +4,8 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxHandle;
 import com.revrobotics.MotorFeedbackSensor;
 import com.revrobotics.REVLibError;
+import edu.wpi.first.util.datalog.DataLog;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.Timer;
 import frc.lib.controller.Controller;
 import frc.lib.controller.PIDGains;
@@ -28,6 +30,7 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
   private final int kParameterSetAttemptCount = 5;
   private final CANSparkMaxHandle m_sparkMaxHandle;
   private final String m_name;
+  private SparkMaxLogger m_logger = null;
 
   /**
    * Store a reference to every spark max.
@@ -148,6 +151,20 @@ public class SparkMax extends CANSparkMax implements TelemetryNode {
     }
 
     return this;
+  }
+
+  public SparkMaxLogger getLogger(DataLog log) {
+    if (m_logger == null) {
+      m_logger = new SparkMaxLogger(this, m_name, log);
+    }
+    return m_logger;
+  }
+
+  public SparkMaxLogger getLogger() {
+    if (m_logger == null) {
+      m_logger = getLogger(DataLogManager.getLog());
+    }
+    return m_logger;
   }
 
   /**

@@ -1,6 +1,7 @@
 package frc.lib.vendor.motorcontroller;
 
 import com.revrobotics.CANSparkMax;
+import edu.wpi.first.hal.HALUtil;
 import edu.wpi.first.util.datalog.DataLog;
 import edu.wpi.first.util.datalog.DoubleLogEntry;
 import edu.wpi.first.util.datalog.IntegerLogEntry;
@@ -15,12 +16,17 @@ public class SparkMaxLogger {
   private final int m_deviceId;
   private final DataLog m_datalog;
   private final String m_name;
+  private static long m_timescaleDelta = 0;
+
+  public static void calculateTimescaleDelta() {
+    m_timescaleDelta = (System.nanoTime() / 1000) - HALUtil.getFPGATime();
+  }
 
   private Consumer<DoubleSample> LoggedStreamDouble(String ntEntryName) {
     String fullNtPath = NT_PREFIX + m_name + "/" + ntEntryName;
     DoubleLogEntry logEntry = new DoubleLogEntry(m_datalog, fullNtPath);
     return (streamedDouble) -> {
-      logEntry.append(streamedDouble.value, streamedDouble.timestamp);
+      logEntry.append(streamedDouble.value, streamedDouble.timestamp * 1000 - m_timescaleDelta);
     };
   }
 
@@ -28,7 +34,7 @@ public class SparkMaxLogger {
     String fullNtPath = NT_PREFIX + m_name + "/" + ntEntryName;
     IntegerLogEntry logEntry = new IntegerLogEntry(m_datalog, fullNtPath);
     return (streamedDouble) -> {
-      logEntry.append(streamedDouble.value, streamedDouble.timestamp);
+      logEntry.append(streamedDouble.value, streamedDouble.timestamp * 1000 - m_timescaleDelta);
     };
   }
 
@@ -40,6 +46,7 @@ public class SparkMaxLogger {
     m_deviceId = sparkMax.getDeviceId();
     m_datalog = log;
     m_name = deviceName;
+    calculateTimescaleDelta();
     m_stream =
         new SparkMaxStream(m_deviceId)
             .appliedOutput(LoggedStreamDouble("appliedOutput"))

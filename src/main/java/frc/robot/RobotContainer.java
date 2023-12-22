@@ -4,9 +4,7 @@
 
 package frc.robot;
 
-import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
-import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.CANSparkMaxLowLevel.PeriodicFrame;
 import edu.wpi.first.util.datalog.DataLog;
 import edu.wpi.first.util.datalog.DoubleLogEntry;
@@ -18,7 +16,7 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.lib.util.ThreadUtils;
-import frc.lib.vendor.motorcontroller.SparkMaxLogger;
+import frc.lib.vendor.motorcontroller.SparkMax;
 import frc.robot.subsystems.ExampleSubsystem;
 
 /**
@@ -32,8 +30,7 @@ public class RobotContainer {
   private final ExampleSubsystem m_exampleSubsystem = new ExampleSubsystem();
 
   private final DataLog m_datalog;
-  private final SparkMaxLogger m_sparkMaxLogger;
-  private final CANSparkMax m_sparkMax;
+  private final SparkMax m_sparkMax;
   private final DoubleLogEntry m_slowVelocityLogger;
   private final DoubleLogEntry m_slowPositionLogger;
   private final DoubleLogEntry m_slowSupplyVoltageLogger;
@@ -42,8 +39,7 @@ public class RobotContainer {
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     m_datalog = DataLogManager.getLog();
-    m_sparkMax = new CANSparkMax(1, MotorType.kBrushless);
-    m_sparkMaxLogger = new SparkMaxLogger(m_sparkMax, "myMax", m_datalog);
+    m_sparkMax = new SparkMax(1, "mySpark");
     m_slowVelocityLogger = new DoubleLogEntry(m_datalog, "/slowmax/1/velocity");
     m_slowPositionLogger = new DoubleLogEntry(m_datalog, "/slowmax/1/position");
     m_slowSupplyVoltageLogger = new DoubleLogEntry(m_datalog, "/slowmax/1/supplyVoltage");
@@ -60,6 +56,7 @@ public class RobotContainer {
 
     m_sparkMax.getEncoder().setAverageDepth(2);
     m_sparkMax.getEncoder().setMeasurementPeriod(8);
+    m_sparkMax.getLogger(m_datalog);
 
     ThreadUtils.sleep(300);
     m_sparkMax.burnFlash();
@@ -91,20 +88,23 @@ public class RobotContainer {
             Commands.repeatingSequence(
                 new InstantCommand(
                     () -> {
-                      m_sparkMaxLogger.start();
+                      m_sparkMax.getLogger().start();
                       long timestamp = System.nanoTime() / 1000000;
                       m_slowVelocityLogger.append(m_sparkMax.getEncoder().getVelocity(), timestamp);
                       m_slowPositionLogger.append(m_sparkMax.getEncoder().getPosition(), timestamp);
                       m_slowSupplyVoltageLogger.append(m_sparkMax.getBusVoltage(), timestamp);
                       m_monotonicTimestampLogger.append(System.nanoTime() / 1000, timestamp);
-                      m_sparkMaxLogger.poll();
                     })))
         .raceWith(Commands.waitSeconds(5))
         .andThen(
             () -> {
               m_sparkMax.set(0);
-              m_sparkMaxLogger.stop();
+              m_sparkMax.getLogger().stop();
             });
+  }
+
+  public void logPeriodic() {
+    m_sparkMax.getLogger().poll();
   }
 
   public void disabledInit() {}

@@ -67,7 +67,6 @@ public class SwerveBot {
                   var rightX =
                       JoystickUtil.squareAxis(
                           -m_driveController.getRightX(), OIConstants.kDriveDeadband);
-                  // Set robot oriented in slow mode
                   m_drive.drive(leftY, leftX, rightX, true);
                 },
                 m_drive)
