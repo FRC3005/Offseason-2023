@@ -313,10 +313,17 @@ public class REVSwerveModule implements SwerveModule, AutoCloseable {
       desiredState.angle = new Rotation2d(MathUtil.angleModulus(desiredState.angle.getRadians()));
     }
 
+    var encoderRotation = new Rotation2d(m_turningEncoder.getPosition());
+
     // Optimize the reference state to avoid spinning further than 90 degrees.
     // Important: Use spark max sensor directly, not wrapped sensor
-    desiredState =
-        SwerveModuleState.optimize(desiredState, new Rotation2d(m_turningEncoder.getPosition()));
+    desiredState = SwerveModuleState.optimize(desiredState, encoderRotation);
+
+    // Scale speed by cosine of angle error. This scales down movement perpendicular to the desired
+    // direction of travel that can occur when modules change directions. This results in smoother
+    // driving.
+    // TODO: Try driving with and without this
+    desiredState.speedMetersPerSecond *= desiredState.angle.minus(encoderRotation).getCos();
 
     m_desiredState = desiredState;
   }

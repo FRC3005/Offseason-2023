@@ -85,7 +85,7 @@ public class Robot extends TimedRobot {
     CommandScheduler.getInstance().run();
 
     if (!RobotConstants.kCompetitionMode) {
-      // Flush network tables when testing to get higher resolution graphs. This will bump it up
+      // Flush network table:ws when testing to get higher resolution graphs. This will bump it up
       // from
       // 10 Hz to 50 Hz. This can hurt CPU usage so be careful when using it.
       NetworkTableInstance.getDefault().flush();
