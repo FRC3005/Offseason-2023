@@ -23,7 +23,7 @@ import frc.robot.subsystems.drive.DriveSubsystem;
  * periodic methods (other than the scheduler calls). Instead, the structure of the robot (including
  * subsystems, commands, and button mappings) should be declared here.
  */
-public class SwerveBot {
+public class SwerveBot implements RobotContainer {
   private final ADIS16470 m_gyro =
       new ADIS16470(
           RobotConstants.kCompetitionMode

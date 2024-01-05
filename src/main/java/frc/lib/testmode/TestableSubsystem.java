@@ -1,7 +1,12 @@
 package frc.lib.testmode;
 
-public interface TestableSubsystem {
-  public void testModePeriodic(boolean globalEnable);
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-  public boolean selfTest();
+public abstract class TestableSubsystem extends SubsystemBase {
+  public void toSafeState() {}
+
+  public SelfTest selfTest() {
+    return null;
+  }
+  ;
 }

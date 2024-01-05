@@ -231,16 +231,18 @@ public abstract class SwerveDrive extends SubsystemBase implements TelemetryNode
     // var swerveModuleStates =
     //     m_kinematics.toSwerveModuleStates(
     //         fieldRelative
-    //             ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot, m_gyro.getRotation2d())
+    //             ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot,
+    // m_gyro.getRotation2d())
     //             : new ChassisSpeeds(xSpeed, ySpeed, rot),
     //         new Translation2d(m_cor_x, m_cor_y));
 
     var swerveModuleStates =
         m_kinematics.toSwerveModuleStates(
-          ChassisSpeeds.discretize(
-            fieldRelative
-                ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot, m_gyro.getRotation2d())
-                : new ChassisSpeeds(xSpeed, ySpeed, rot),
+            ChassisSpeeds.discretize(
+                fieldRelative
+                    ? ChassisSpeeds.fromFieldRelativeSpeeds(
+                        xSpeed, ySpeed, rot, m_gyro.getRotation2d())
+                    : new ChassisSpeeds(xSpeed, ySpeed, rot),
                 0.02),
             new Translation2d(m_cor_x, m_cor_y));
 
